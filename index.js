@@ -21,6 +21,20 @@ async function run() {
   try {
     await client.connect();
     const jobsCollection = client.db("jobNest").collection("allJobs");
+    const SliderCollection = client.db("jobNest").collection("sliders");
+
+    // Read Slider Data
+    app.get("/sliders", async (req, res) => {
+      const cursor = SliderCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+
+    app.get("/jobs", async (req, res) => {
+      const cursor = jobsCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
