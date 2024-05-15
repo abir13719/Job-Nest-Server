@@ -21,6 +21,7 @@ async function run() {
   try {
     await client.connect();
     const jobsCollection = client.db("jobNest").collection("allJobs");
+    const appliedJobsCollection = client.db("jobNest").collection("appliedJobs");
     const SliderCollection = client.db("jobNest").collection("sliders");
 
     // Read Slider Data
@@ -48,6 +49,14 @@ async function run() {
           applicantsNumber: 1,
         },
       };
+
+      app.post("/jobs/applied", async (req, res) => {
+        const userInfo = req.body;
+        console.log(userInfo);
+        const result = await appliedJobsCollection.insertOne(userInfo);
+        res.json(result);
+      });
+
       const result = await jobsCollection.findOne({ _id: new ObjectId(id) }, option);
       res.send(result);
     });
