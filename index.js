@@ -23,20 +23,30 @@ async function run() {
     const jobsCollection = client.db("jobNest").collection("allJobs");
     const appliedJobsCollection = client.db("jobNest").collection("appliedJobs");
     const SliderCollection = client.db("jobNest").collection("sliders");
+    const ReviewCollection = client.db("jobNest").collection("feedBack");
 
     // Read Slider Data
     app.get("/sliders", async (req, res) => {
       const cursor = SliderCollection.find();
       const result = await cursor.toArray();
-      res.send(result);
+      res.json(result);
     });
 
+    // Read All Jobs
     app.get("/jobs", async (req, res) => {
       const cursor = jobsCollection.find();
+      const result = await cursor.toArray();
+      res.json(result);
+    });
+
+    // Read User Reviews
+    app.get("/feedback", async (req, res) => {
+      const cursor = ReviewCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
 
+    // Read Single Job Data by ID
     app.get("/jobs/:id", async (req, res) => {
       const id = req.params.id;
       const option = {
@@ -49,18 +59,19 @@ async function run() {
           applicantsNumber: 1,
         },
       };
-
-      app.post("/jobs/applied", async (req, res) => {
-        const userInfo = req.body;
-        console.log(userInfo);
-        const result = await appliedJobsCollection.insertOne(userInfo);
-        res.json(result);
-      });
-
       const result = await jobsCollection.findOne({ _id: new ObjectId(id) }, option);
-      res.send(result);
+      res.json(result);
     });
 
+    // Create Applied Jobs
+    app.post("/jobs/applied", async (req, res) => {
+      const userInfo = req.body;
+      console.log(userInfo);
+      const result = await appliedJobsCollection.insertOne(userInfo);
+      res.json(result);
+    });
+
+    // Check Database Connection
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
