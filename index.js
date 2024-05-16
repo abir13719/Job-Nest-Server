@@ -32,6 +32,13 @@ async function run() {
       res.json(result);
     });
 
+    // Create all Jobs
+    app.post("/jobs", async (req, res) => {
+      const job = req.body;
+      const result = await jobsCollection.insertOne(job);
+      res.json(result);
+    });
+
     // Read All Jobs
     app.get("/jobs", async (req, res) => {
       const cursor = jobsCollection.find();
@@ -43,7 +50,7 @@ async function run() {
     app.get("/feedback", async (req, res) => {
       const cursor = ReviewCollection.find();
       const result = await cursor.toArray();
-      res.send(result);
+      res.json(result);
     });
 
     // Read Single Job Data by ID
@@ -64,10 +71,15 @@ async function run() {
     });
 
     // Create Applied Jobs
-    app.post("/jobs/applied", async (req, res) => {
+    app.post("/applied", async (req, res) => {
       const userInfo = req.body;
-      console.log(userInfo);
       const result = await appliedJobsCollection.insertOne(userInfo);
+      res.json(result);
+    });
+
+    // Read applied jobs
+    app.get("/applied", async (req, res) => {
+      const result = await appliedJobsCollection.find().toArray();
       res.json(result);
     });
 
