@@ -32,6 +32,13 @@ async function run() {
       res.json(result);
     });
 
+    // Read User Reviews
+    app.get("/feedback", async (req, res) => {
+      const cursor = ReviewCollection.find();
+      const result = await cursor.toArray();
+      res.json(result);
+    });
+
     // Create all Jobs
     app.post("/jobs", async (req, res) => {
       const job = req.body;
@@ -40,16 +47,20 @@ async function run() {
     });
 
     // Read All Jobs
-    app.get("/jobs", async (req, res) => {
-      const cursor = jobsCollection.find();
-      const result = await cursor.toArray();
-      res.json(result);
-    });
+    // app.get("/jobs", async (req, res) => {
+    //   const cursor = jobsCollection.find();
+    //   const result = await cursor.toArray();
+    //   res.json(result);
+    // });
 
-    // Read User Reviews
-    app.get("/feedback", async (req, res) => {
-      const cursor = ReviewCollection.find();
-      const result = await cursor.toArray();
+    // Read Job Data by Email
+    app.get("/jobs", async (req, res) => {
+      let query = {};
+      if (req.query?.postByEmail) {
+        query = { postByEmail: req.query.postByEmail };
+      }
+      console.log(req.query);
+      const result = await jobsCollection.find(query).toArray();
       res.json(result);
     });
 
@@ -67,6 +78,47 @@ async function run() {
         },
       };
       const result = await jobsCollection.findOne({ _id: new ObjectId(id) }, option);
+      res.json(result);
+    });
+
+    app.get("/jobs/update/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await jobsCollection.findOne(query);
+      res.json(result);
+    });
+
+    // Update Job Data by ID
+    app.put("/jobs/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedJob = req.body;
+
+      // //updating in database
+      const filter = { _id: new ObjectId(id) };
+      const option = { upsert: true };
+      const newUpdatedInformations = {
+        $set: {
+          title: updatedJob.title,
+          salaryRange: updatedJob.salaryRange,
+          pictureUrl: updatedJob.pictureUrl,
+          category: updatedJob.category,
+          applicantsNumber: updatedJob.applicantsNumber,
+          postingDate: updatedJob.postingDate,
+          applicationDeadline: updatedJob.applicationDeadline,
+          postBy: updatedJob.postBy,
+          postByEmail: updatedJob.postByEmail,
+          description: updatedJob.description,
+        },
+      };
+      const result = await jobsCollection.updateOne(filter, newUpdatedInformations, option);
+      res.json(result);
+    });
+
+    // Delete Job Data by ID
+    app.delete("/jobs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await jobsCollection.deleteOne(query);
       res.json(result);
     });
 
