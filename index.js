@@ -57,21 +57,52 @@ async function run() {
     // Read Single Job Data by ID
     app.get("/jobs/:id", async (req, res) => {
       const id = req.params.id;
-      const option = {
-        projection: {
-          _id: 1,
-          title: 1,
-          pictureUrl: 1,
-          description: 1,
-          salaryRange: 1,
-          applicantsNumber: 1,
-          category: 1,
-          postingDate: 1,
-          applicationDeadline: 1,
-        },
-      };
-      const result = await jobsCollection.findOne({ _id: new ObjectId(id) }, option);
-      res.json(result);
+
+      // Validate the ID
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid job ID format" });
+      }
+
+      try {
+        const option = {
+          projection: {
+            _id: 1,
+            title: 1,
+            pictureUrl: 1,
+            description: 1,
+            salaryRange: 1,
+            applicantsNumber: 1,
+            category: 1,
+            postingDate: 1,
+            applicationDeadline: 1,
+            postByEmail: 1, // Add this field
+          },
+        };
+        const result = await jobsCollection.findOne({ _id: new ObjectId(id) }, option);
+
+        if (!result) {
+          return res.status(404).json({ error: "Job not found" });
+        }
+
+        res.json(result);
+      } catch (error) {
+        console.error("Error fetching job details:", error);
+        res.status(500).json({ error: "An error occurred while fetching job details" });
+      }
+    });
+
+    app.get("/applied/:jobId/:email", async (req, res) => {
+      const { jobId, email } = req.params;
+
+      try {
+        const query = { jobId, email }; // jobId should be a string here
+        const appliedJob = await appliedJobsCollection.findOne(query);
+
+        res.json({ applied: !!appliedJob });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+      }
     });
 
     // Read Single Job Data by ID
