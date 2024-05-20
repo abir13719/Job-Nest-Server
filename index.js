@@ -119,6 +119,9 @@ async function run() {
       if (req.query?.category) {
         query = { category: req.query.category };
       }
+      if (req.query?.email) {
+        query = { email: req.query.email };
+      }
       console.log(req.query.email);
       const result = await appliedJobsCollection.find(query).toArray();
       res.json(result);
