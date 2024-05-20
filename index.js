@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
@@ -7,7 +8,8 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-const uri = "mongodb://localhost:27017";
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.k8que7r.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+// const uri = "mongodb://localhost:27017";
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -20,10 +22,10 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     await client.connect();
-    const jobsCollection = client.db("jobNest").collection("allJobs");
-    const appliedJobsCollection = client.db("jobNest").collection("appliedJobs");
-    const SliderCollection = client.db("jobNest").collection("sliders");
-    const ReviewCollection = client.db("jobNest").collection("feedBack");
+    const jobsCollection = client.db("jonNest").collection("allJobs");
+    const appliedJobsCollection = client.db("jonNest").collection("appliedJobs");
+    const SliderCollection = client.db("jonNest").collection("sliders");
+    const ReviewCollection = client.db("jonNest").collection("feedBack");
 
     // Read Slider Data
     app.get("/sliders", async (req, res) => {
@@ -39,27 +41,15 @@ async function run() {
       res.json(result);
     });
 
-    // Create all Jobs
-    app.post("/jobs", async (req, res) => {
-      const job = req.body;
-      const result = await jobsCollection.insertOne(job);
-      res.json(result);
-    });
-
-    // Read All Jobs
-    // app.get("/jobs", async (req, res) => {
-    //   const cursor = jobsCollection.find();
-    //   const result = await cursor.toArray();
-    //   res.json(result);
-    // });
-
-    // Read Job Data by Email
+    // Read Job Data by Email and Title
     app.get("/jobs", async (req, res) => {
       let query = {};
       if (req.query?.postByEmail) {
         query = { postByEmail: req.query.postByEmail };
       }
-      console.log(req.query);
+      if (req.query?.title) {
+        query.title = { $regex: new RegExp(req.query.title, "i") };
+      }
       const result = await jobsCollection.find(query).toArray();
       res.json(result);
     });
@@ -75,16 +65,45 @@ async function run() {
           description: 1,
           salaryRange: 1,
           applicantsNumber: 1,
+          category: 1,
+          postingDate: 1,
+          applicationDeadline: 1,
         },
       };
       const result = await jobsCollection.findOne({ _id: new ObjectId(id) }, option);
       res.json(result);
     });
 
+    // Read Single Job Data by ID
     app.get("/jobs/update/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await jobsCollection.findOne(query);
+      res.json(result);
+    });
+
+    // Read applied jobs
+    app.get("/applied", async (req, res) => {
+      let query = {};
+      if (req.query?.category) {
+        query = { category: req.query.category };
+      }
+      console.log(req.query.email);
+      const result = await appliedJobsCollection.find(query).toArray();
+      res.json(result);
+    });
+
+    // Create all Jobs
+    app.post("/jobs", async (req, res) => {
+      const job = req.body;
+      const result = await jobsCollection.insertOne(job);
+      res.json(result);
+    });
+
+    // Create Applied Jobs
+    app.post("/applied", async (req, res) => {
+      const userInfo = req.body;
+      const result = await appliedJobsCollection.insertOne(userInfo);
       res.json(result);
     });
 
@@ -119,19 +138,6 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await jobsCollection.deleteOne(query);
-      res.json(result);
-    });
-
-    // Create Applied Jobs
-    app.post("/applied", async (req, res) => {
-      const userInfo = req.body;
-      const result = await appliedJobsCollection.insertOne(userInfo);
-      res.json(result);
-    });
-
-    // Read applied jobs
-    app.get("/applied", async (req, res) => {
-      const result = await appliedJobsCollection.find().toArray();
       res.json(result);
     });
 
