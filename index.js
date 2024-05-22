@@ -1,12 +1,33 @@
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
+const verifyToken = (req, res, next) => {
+  const accessToken = req.cookies.accessToken;
+  if (!accessToken) {
+    return res.status(401).json({ message: "Unauthorized Access" });
+  }
+  jwt.verify(accessToken, process.env.ACCESS_TOKEN_SHH, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ message: "Unauthorized Access" });
+    }
+    req.user = decoded;
+    next();
+  });
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.k8que7r.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -26,6 +47,26 @@ async function run() {
     const appliedJobsCollection = jobNest.collection("appliedJobs");
     const SliderCollection = jobNest.collection("sliders");
     const ReviewCollection = jobNest.collection("feedBack");
+
+    // Create access token
+    app.post("/authentication", (req, res) => {
+      const accessToken = jwt.sign({ email: req.body.email }, process.env.ACCESS_TOKEN_SHH, {
+        expiresIn: "1h",
+      });
+      res
+        .cookie("accessToken", accessToken, {
+          httpOnly: true,
+          secure: true,
+          sameSite: "none",
+        })
+        .json({ success: true });
+    });
+
+    // Clear cookies
+    app.post("/clear-cookie", (req, res) => {
+      res.clearCookie("accessToken");
+      res.status(200).json({ success: false });
+    });
 
     // Read Slider Data
     app.get("/sliders", async (req, res) => {
@@ -48,12 +89,13 @@ async function run() {
       if (req.query?.title) {
         query.title = { $regex: new RegExp(req.query.title, "i") };
       }
+
       const result = await jobsCollection.find(query).toArray();
       res.json(result);
     });
 
     // Read Single Job Data by ID
-    app.get("/jobs/:id", async (req, res) => {
+    app.get("/jobs/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const option = {
         projection: {
@@ -74,7 +116,7 @@ async function run() {
     });
 
     // Read Single Job Data by ID and Email
-    app.get("/applied/:jobId/:email", async (req, res) => {
+    app.get("/applied/:jobId/:email", verifyToken, async (req, res) => {
       const { jobId, email } = req.params;
       const query = { jobId, email };
       const appliedJob = await appliedJobsCollection.findOne(query);
@@ -90,13 +132,16 @@ async function run() {
     });
 
     // Read applied jobs
-    app.get("/applied", async (req, res) => {
+    app.get("/applied", verifyToken, async (req, res) => {
       let query = {};
       if (req.query?.email) {
         query.email = req.query.email;
       }
       if (req.query?.category) {
         query.category = req.query.category;
+      }
+      if (req.user.email !== req.query.email) {
+        return res.status(401).json({ message: "Unauthorized Access" });
       }
       const result = await appliedJobsCollection.find(query).toArray();
       res.json(result);
