@@ -9,7 +9,11 @@ const port = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: [
+      "http://localhost:5173",
+      "https://job-nest-5890c.web.app",
+      "https://job-nest-5890c.firebaseapp.com",
+    ],
     credentials: true,
   })
 );
@@ -28,6 +32,11 @@ const verifyToken = (req, res, next) => {
     next();
   });
 };
+const cookiesOptions = {
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  secure: process.env.NODE_ENV === "production" ? true : false,
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.k8que7r.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -41,7 +50,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const jobNest = client.db("jonNest");
     const jobsCollection = jobNest.collection("allJobs");
     const appliedJobsCollection = jobNest.collection("appliedJobs");
@@ -53,18 +62,12 @@ async function run() {
       const accessToken = jwt.sign({ email: req.body.email }, process.env.ACCESS_TOKEN_SHH, {
         expiresIn: "1h",
       });
-      res
-        .cookie("accessToken", accessToken, {
-          httpOnly: true,
-          secure: true,
-          sameSite: "none",
-        })
-        .json({ success: true });
+      res.cookie("accessToken", accessToken, cookiesOptions).json({ success: true });
     });
 
     // Clear cookies
     app.post("/clear-cookie", (req, res) => {
-      res.clearCookie("accessToken");
+      res.clearCookie("accessToken", { ...cookiesOptions });
       res.status(200).json({ success: false });
     });
 
@@ -198,7 +201,7 @@ async function run() {
     });
 
     // Check Database Connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
   }
